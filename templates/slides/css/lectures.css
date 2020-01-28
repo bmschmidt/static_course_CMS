@@ -1,0 +1,16 @@
+span.blue {
+    color: SteelBlue;
+}
+
+span.black {
+    color: black;
+}
+
+span.red {
+    color: Firebrick;
+}
+
+.flexbox {
+    display: flex;
+}
+
