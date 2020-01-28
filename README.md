@@ -1,11 +1,8 @@
-Course Management
+Truly Static Course Management System
 =================
 
-This is a set of templates for maintaining course files in Markdown and Pandoc
-and exporting them (as needed) to HTML for a website. It's built up off the
-syllabus files Andrew Goldstone created for his courses at Rutgers; the chief
-difference is that the root level is designed to hold all other paper documents
-distributed in the course.
+This is a set of scripts and templates for maintaining course files in Markdown and Pandoc
+and exporting them (as needed) to HTML for a website. I
 
 The basic workflow is:
 
@@ -14,6 +11,8 @@ The basic workflow is:
 3. Build a course website in a folder called `_site`.
 3. Watch as the file is uploaded to the course website through pandoc
 
+
+The core pdf templates are by Andrew Goldstone.
 
 Dependencies
 ============
@@ -24,12 +23,16 @@ This requires some fiddly command line stuff.
 * Pandoc version 2.3 (IIRC) or higher with some [custom extension scripts I wrote](https://github.com/bmschmidt/MarkdownLectures)
   to work with lectures and outlines.
 * A full latex stack to make pdfs.
+* python3 to run the various script in `scripts`. I don't really plan to make them easier to reproduce.
 
+So that's right--to fully work with this, you get to work in R, Python, Makefile, and Haskell. I plan to add something using node soon.
 
 
 
 Content Folder
 =======
+
+The course lives in a folder called `course/`. It's not part of this repository; I'll have some examples online, though.
 
 Folders that begin with capital letters (`Handouts/`,`Assignments/`, etc.) are
 the **content folders** for the class. Any file place in one of those. They become links for the website.
@@ -37,7 +40,9 @@ the **content folders** for the class. Any file place in one of those. They beco
 Syllabus
 -------
 
-There must be a folder called `syllabus/`. It contains numbered markdown files; eg, 4-Schedule.
+There must be a folder called `syllabus/`. It contains markdown files; eg, Grading, Requirements.
+
+* The schedule is built from a yaml file. That doesn't have dates in it: instead, you enter the days and semester for a class and they're parsed from the `calendars.yml` file which handles things like breaks. 
 
 
 Lectures
