@@ -1,7 +1,7 @@
-Course Management
+Truly Static Course Management System
 =================
 
-This is a set of templates for maintaining course files in Markdown and Pandoc
+This is a set of scripts and templates for maintaining course files in Markdown and Pandoc
 and exporting them (as needed) to HTML for a website. I
 
 The basic workflow is:
