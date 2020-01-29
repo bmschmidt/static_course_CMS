@@ -3,31 +3,29 @@ import arrow
 import re
 from settings import dir, course_settings
 
-schedule = f"{dir}/syllabus/schedule.yml"
-
 def load(x):
     return yaml.load(open(x), Loader = yaml.SafeLoader)
 
-for line in open(schedule):
-    if "- @" in line:
-        print(line)
-        raise yaml.scanner.ScannerError("This line ain't gonna work")
-        
-def format_session(session, date):
-    global unit_number
+week = 1        
+def format_session(session = None, date = None, seminar = False):
+    global week
     text = []
     if 'unit' in session:
         text.append(f"## {session['unit']}")
-    if 'date' in session:
-        raise TypeError("Haven't figured this out yet")
-    text.append(f"### {date} \n\n {session['title']}")
-
+    if date is not None:
+        text.append(f"### {date} \n\n {session['title']}")
+        if seminar:
+            text.append(f"### Week {week} ({date}) \n\n {session['title']}")        
+    elif 'date' in session:
+        text.append(f"### {session['date']}")
+        
     for k, v in session.items():
         if k in ['unit', 'date', 'title', 'notes']:
             # Handled elsewhere:
             continue
         else:
             text.append(markdown_of_list_or_str(k, v))
+    week += 1
     return "\n\n".join(text) + "\n\n\n"
 
 citation_regex = r"([^\[ ]*_[^\[ ]*_[0-9]*[a-g]?)"
@@ -44,23 +42,21 @@ def markdown_of_list_or_str(k, v):
             # Crazy, but fine for personal use. If you put in a Zotero citation 
             if isinstance(val, list) and re.search(citation_regex, val[0]):
                 val = ", ".join(val)
-            print(val)
             val = re.sub(citation_regex, "@\\1", val)
             output.append(f"* {val}")
     else:
-        print(v)
         output.append(f"{k}: {v}")
     return "\n".join(output)
 
-sessions = load(schedule)
-meta = course_settings
-days = meta['days']
 date_format = "ddd, MMM DD"
 iso_format = "YYYY-MM-DD"
 
 class Meetings(object):
-    def __init__(self, meta):
-        self.c = load("../calendars.yml")[meta['calendar']]
+    def __init__(self, meta, days):
+        try:
+            self.c = load("calendars.yml")[meta['calendar']]
+        except KeyError:
+            raise KeyError("Your course.yml file must define a calendar in calendars.yml")
         breaks = dict()
         for bb in self.c['breaks']:
             d = arrow.get(bb['start'])
@@ -73,8 +69,10 @@ class Meetings(object):
         # Make iteration easier.
         self.day = arrow.get(self.c['start_date']).shift(days = -1)
         self.end = arrow.get(self.c['end_date'])        
-
+        self.days = days
+        
     def __iter__(self):
+        days = self.days
         while True:
             self.day = self.day.shift(days = 1)            
             if self.day > self.end:
@@ -88,23 +86,61 @@ class Meetings(object):
                 message = f"No class: {self.breaks[repr]}"
             yield (repr, iso, message)
 
-meetings = Meetings(meta)
-session_info = {}
+import sys
 
-schedule = open(f"{dir}/syllabus/Schedule.md", "w")
-schedule.write("# Schedule\n\n")
+def main():
+    try:
+        schedule, md_file = sys.argv[1:]
+    except ValueError:
+        schedule = sys.argv[1]
+        md_file = None
+    for line in open(schedule):
+        if "- @" in line:
+            sys.stderror.write(line)
+            raise yaml.scanner.ScannerError("This line ain't gonna work")
+    
+    sessions = load(schedule)
+    days = course_settings['days']
 
-import os
-extant_lectures = os.listdir(f"{dir}/Lectures")
+    meetings = Meetings(course_settings, days)
+    session_info = {}
 
-for date, isodate, message in meetings:
-    session_info
-    if message is not None:
-        output = f"""### {date}\n\n{message}\n\n"""
-    if message is None:
+    if md_file is not None:
+        schedule = open(md_file, "w")
+    else:
+        schedule = sys.stdout
+        
+    schedule.write("# Schedule\n\n")
+
+    import os
+    extant_lectures = os.listdir(f"{dir}/Lectures")
+    meeting_dates = [j for j in meetings]
+    all_sessions = [s for s in sessions]
+    
+    while True:
         try:
-            sess = sessions.pop(0)
-            title = sess['title']
+            current_session = all_sessions.pop(0)
+        except IndexError:
+            if len(meeting_dates) > 0:
+                while True:
+                    try:                        
+                        (date, isodate, date_message) = meeting_dates.pop(0)
+                        schedule.write(f"""### {date}\n\nTBD\n\n""")
+                    except IndexError:
+                        break
+            break
+
+        if not 'title' in current_session:
+            schedule.write(format_session(current_session, None, seminar = len(days)==1))            
+        else:
+            # Grab the date
+            (date, isodate, date_message) = meeting_dates.pop(0)
+            # Send the date to the lectures folder.
+            while date_message is not None:
+                schedule.write(f"""### {date}\n\n{date_message}\n\n""")
+                (date, isodate, date_message) = meeting_dates.pop(0)
+               
+            title = current_session['title']
             session_info[title] = {'date': isodate}
             space_title = title.replace(" ", "_")
             if space_title + ".md" in extant_lectures:
@@ -113,12 +149,9 @@ for date, isodate, message in meetings:
                     t.write(yaml.dump({
                         'title': title,
                         'date': isodate
-                        }))
+                    }))
                     t.write("\n...\n\n")
-            else:
-                print(space_title)
-            output = format_session(sess, date)
-        except IndexError:
-            output = f"""### {date}\n\nTBD/Flex\n\n"""
-    schedule.write(output)
-
+            schedule.write(format_session(current_session, date))
+            
+if __name__=="__main__":
+    main()
