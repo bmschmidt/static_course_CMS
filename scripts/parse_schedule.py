@@ -28,6 +28,7 @@ def format_session(session = None, date = None, seminar = False):
     week += 1
     return "\n\n".join(text) + "\n\n\n"
 
+citation_regex = r"([^\[ ]*_[^\[ ]*_[0-9]*[a-g]?)"
 
 def markdown_of_list_or_str(k, v):
     output = []
@@ -38,10 +39,10 @@ def markdown_of_list_or_str(k, v):
         for val in v:
             if val is None:
                 continue
-            try:
-                val = re.sub("([^ ]*_[^ ]*_[0-9]*[a-g]?)", "@\\1", val)
-            except:
-                raise
+            # Crazy, but fine for personal use. If you put in a Zotero citation 
+            if isinstance(val, list) and re.search(citation_regex, val[0]):
+                val = ", ".join(val)
+            val = re.sub(citation_regex, "@\\1", val)
             output.append(f"* {val}")
     else:
         output.append(f"{k}: {v}")
