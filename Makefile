@@ -5,7 +5,7 @@ content_root=course
 config_file = $(content_root)/course.yml
 
 bibLocation=$(content_root)/works_cited.bib
-pandocOptions=--template=templates/template.tex --bibliography=$(bibLocation) --csl=citationstyles/inline.csl
+pandocOptions=--template=templates/template.tex --bibliography=$(bibLocation) --csl=citationstyles/chicago-in-text.csl
 course_code=$(shell cat $(config_file) | shyaml get-value Code)
 
 # All md files beginning with a capital letter should become PDFs, except README.md and anything in Readings
@@ -47,7 +47,14 @@ glimpse: $(MARKDOWNS)
 compiledLectures: $(LECTURESEPUB) $(slides)
 
 test:
-	echo$(SYLLABUS_SECTIONS)
+	@echo "SYLLABUS SECTIONS\n------------------"
+	@echo $(SYLLABUS_SECTIONS)
+	@echo "PDFS\n------------------"
+	@echo $(PDFS)
+	@echo "WEBPDFS\n------------------"
+	@echo $(WEBPDFS)
+	@echo "MARKDOWNS\n------------------"
+	@echo $(MARKDOWNS)
 
 
 ###################
@@ -78,8 +85,8 @@ _site/index.html: $(config_file) $(MARKDOWNS) _site $(SYLLABUS_SECTIONS) $(conte
 	rsync -r _site/_site/ _site/
 
 _site/%.pdf: _site
-	@make $(subst __,/,$*.pdf)
-	@cp $(subst __,/,$*.pdf) $@
+	@make $(content_root)/$(subst __,/,$*.pdf)
+	@cp $(content_root)/$(subst __,/,$*.pdf) $@
 
 _site/Lecture.pdfs:
 # This is just a dummy.

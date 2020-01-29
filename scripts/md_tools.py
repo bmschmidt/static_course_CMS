@@ -175,7 +175,7 @@ def yaml_header(doc_meta):
         doc_meta["title"] = ""
     if not "title" in doc_meta:
         doc_meta["title"] = ""
-    doc_meta["csl"] = Path("citationstyles/inline.csl").resolve()
+    doc_meta["csl"] = Path("citationstyles/chicago-in-text.csl").resolve()
     doc_meta["bibliography"] = Path(f"{dir}/works_cited.bib").resolve()    
     return """---
 title: "{title}"
