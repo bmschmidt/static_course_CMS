@@ -102,41 +102,54 @@ $(content_root)/images/%: $(content_root)/Lectures/%.md
 templates/configuration.tex: $(config_file)
 	python scripts/make_config.py
 
+###################
+## Bibliography ###
+###################
+
+$(content_root)/.pathkeys: $(SYLLABUS_SECTIONS) $(MARKDOWNS)
+	python scripts/list_bibliography_keys.py
+
+$(bibLocation): $(content_root)/.pathkeys
+	python scripts/create_bibliography.py
+
 ##################
 #### Syllabus ####
 ##################
 
 $(content_root)/syllabus/Schedule.md: $(content_root)/syllabus/schedule.yml
-	python scripts/parse_schedule.py
+	python scripts/parse_schedule.py $< $@
 
 $(content_root)/meetings.yml: $(content_root)/syllabus/schedule.yml
 	python scripts/parse_schedule.py
 
-$(content_root)/syllabus/syllabus.pdf: $(content_root)/syllabus/syllabus.md templates/configuration.tex  $(config_file) $(content_root)/works_cited.bib
+$(content_root)/syllabus/syllabus.pdf: $(content_root)/syllabus/syllabus.md templates/configuration.tex  $(config_file) $(bibLocation)
 	pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --variable syllabus=T $<
 
-$(content_root)/syllabus/%.pdf: templates/configuration.tex $(content_root)/syllabus/%.md $(content_root)/works_cited.bib
+$(content_root)/syllabus/%.pdf: templates/configuration.tex $(content_root)/syllabus/%.md $(bibLocation)
 	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $< $(config_file)
 
-$(content_root)/syllabus/syllabus.md: $(content_root)/syllabus/Schedule.md $(SYLLABUS_SECTIONS) $(content_root)/syllabus/schedule.yml
+$(content_root)/syllabus/syllabus.md: $(content_root)/syllabus/Schedule.md $(SYLLABUS_SECTIONS) $(content_root)/syllabus/schedule.yml $(content_root)/syllabus/order.yml
 # For the printed syllabus, drop headers a level and make the title
 # a section heading. This could be done properly in pandoc, but isn't.
 	pandoc  $(config_file) $(SYLLABUS_SECTIONS) -t markdown | perl -pe ' s/^#/\n##/; s/^% /\n\n# /' > $@
 #	echo "$(SYLLABUS_SECTIONS)" | tr " " "\n" | xargs 
 
+$(content_root)/syllabus/order.yml:
+	ls $(content_root)/syllabus/ | grep md | grep -v syllabus | perl -pe 's/.md.?//' | uniq > $(content_root)/syllabus/order.yml
+
 ##############
 ## Lectures ##
 ##############
 
-$(content_root)/Lectures/outlines/%.pdf: $(content_root)/Lectures/%.md $(content_root)/works_cited.bib
+$(content_root)/Lectures/outlines/%.pdf: $(content_root)/Lectures/%.md $(bibLocation)
 	@mkdir -p $(content_root)/Lectures/outlines/
 	pandoc --pdf-engine=xelatex --filter /usr/local/bin/lectureToOutline $(pandocOptions) -o $@ $< $(config_file) $(config_file) $(shell find $(content_root)/Lectures -regex ".*$*.\(md\|yml\)") 
 	cp $@ _site/
 
-$(content_root)/Lectures/%.epub: $(content_root)/Lectures/%.md $(config_file) $(content_root)/works_cited.bib
+$(content_root)/Lectures/%.epub: $(content_root)/Lectures/%.md $(config_file) $(bibLocation)
 	pandoc --bibliography=$(bibLocation) --filter /usr/local/bin/lectureToPrintable $(config_file) $(shell find Lectures -regex ".*$*.\(md\|yml\)")  -o $@
 
-$(content_root)/Lectures/%.pdf: $(content_root)/Lectures/%.md $(config_file) $(content_root)/works_cited.bib
+$(content_root)/Lectures/%.pdf: $(content_root)/Lectures/%.md $(config_file) $(bibLocation)
 	pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --filter /usr/local/bin/lectureToPrintable $(config_file) $(shell find $(content_root)/Lectures -regex ".*$*.\(md\|yml\)")
 
 
@@ -145,9 +158,10 @@ $(content_root)/Lectures/%.pdf: $(content_root)/Lectures/%.md $(config_file) $(c
 ############
 
 %.pdf: %.md $(config_file) works_cited.bib
+	echo $@
 	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $< $(config_file)
 
-$(content_root)/tests/%.pdf: %.md $(config_file) $(content_root)/works_cited.bib
+$(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)
 	echo "Building with base format"
 	pandoc  --pdf-engine=xelatex -o $@ --filter /usr/local/bin/shuffleAllLists $(pandocOptions) $< $(config_file)
 
@@ -167,5 +181,4 @@ _site/slides/%.html: $(content_root)/Lectures/%.md
 	mkdir -p _site/slides
 	pandoc --filter /usr/local/bin/lectureToSlidedeck --slide-level=2 -V theme=night -t revealjs --template templates/revealjs.html --variable=transition:Slide $< > $@
 
-$(content_root)/works_cited.bib: $(content_root)/syllabus/Schedule.md
-	python scripts/filter_bibliography.py
+

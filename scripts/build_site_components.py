@@ -11,17 +11,18 @@ course = course_settings
 def build_yaml():
     output = {}
     output["name"] = course["Course_Title"]
-#    output["output_dir"] = "."
     output["navbar"] = {}
     output["navbar"]["title"] = course["Course_Number"]
     site_list = files_in_dir(dir, render_too = True)
-#    double_linked = []
-#    for l in site_list:
-#        if 'menu' in l and l['text'] == 'Syllabus':
-#            double_linked = l['menu']
-#    site_list = double_linked
+    if course['web_site'] == "syllabus_only":    
+        double_linked = []
+        for l in site_list:
+            if 'menu' in l and l['text'] == 'Syllabus':
+                double_linked = l['menu']
+        site_list = double_linked
 
     output["navbar"]["left"] = site_list
+        
     f = open("_site/_site.yml","w")
     f.write(yaml.dump(output))
 
@@ -44,7 +45,7 @@ def write_pdf_list(site_list):
                         print("\n\n\n")
                         raise
     with open(".pdflist.tmp","w") as f:
-        pdfs = [fn for fn in pdfs if not fn.startswith("_site/syllabus")]
+        pdfs = [fn for fn in pdfs if not fn.startswith("_site/syllabus") and not fn.endswith("Readings.pdf")]
         pdfs.append("_site/syllabus.pdf")
         f.write(" ".join(pdfs) + "\n")
                 
