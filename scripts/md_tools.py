@@ -98,13 +98,11 @@ class MarkdownFile(object):
             local_meta = yaml.load(yml_path.open(), yaml.SafeLoader)
             if "date" in local_meta:
                 local_meta['date'] = datetime.date.fromisoformat(local_meta['date'])
-            #print(local_meta)
             self.meta.update(local_meta)
             return
         
         except IOError:
             pass
-        print(self.fn)
         syllabus_section = self.fn.replace("syllabus/", "")\
                            .replace(".md", "")
         if syllabus_section in syllabus_order:

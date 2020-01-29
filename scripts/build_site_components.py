@@ -28,11 +28,9 @@ def build_yaml():
     return site_list
 
 def write_pdf_list(site_list):
-    print("Writing PDF list")
     pdfs = []
     
     for item in site_list:
-        print(item)
         if "href" in item:
             pdfs.append(("_site/" + item['href']).replace(".html",".pdf"))
         if "menu" in item:
@@ -58,7 +56,7 @@ def files_in_dir(dir, render_too = False):
     for sf in subfolders:
         name = sf.name
         if "exclude_dirs" in course:
-            if name in course["exclude_dirs"] or sf=="Lectures" or sf=="Readings":
+            if name in course["exclude_dirs"] or sf=="Readings":
                 continue
         if not re.search("^[A-Z]|syllabus",name):
             continue
@@ -71,8 +69,6 @@ def files_in_dir(dir, render_too = False):
             hits[-1]["menu"] = []
             
         def get_meta_and_build(md):
-            print(name, md)
-            print(Path(sf, md))
             oo = md_tools.MarkdownFile(Path(sf, md))
             oo.build_needed_Rmd()
             ddate = oo.meta["date"]
