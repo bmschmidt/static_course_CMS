@@ -167,9 +167,13 @@ $(content_root)/Lectures/%.pdf: $(content_root)/Lectures/%.yml $(config_file) $(
 ##  PDFS  ##
 ############
 
-%.pdf: %.md $(config_file) works_cited.bib
+course/Handouts/%.pdf: course/Handouts/%.md $(config_file)
 	echo $@
-	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $< $(config_file)
+	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
+
+%.pdf: %.md $(config_file)
+	echo $@
+	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
 $(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)
 	echo "Building with base format"

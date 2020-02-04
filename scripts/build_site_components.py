@@ -14,7 +14,7 @@ def build_yaml():
     output["navbar"] = {}
     output["navbar"]["title"] = course["Course_Number"]
     site_list = files_in_dir(dir, render_too = True)
-    if course['web_site'] == "syllabus_only":    
+    if course['course_type'] == "syllabus_only":    
         double_linked = []
         for l in site_list:
             if 'menu' in l and l['text'] == 'Syllabus':
