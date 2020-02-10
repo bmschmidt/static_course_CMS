@@ -149,7 +149,7 @@ $(content_root)/syllabus/order.yml:
 ##############
 
 $(content_root)/Lectures/%.yml:
-	echo "$*" | xargs printf '---\ntitle: "%s"\n\n...' > $@
+	echo "$*" | xargs printf '\-\-\-\ntitle: "%s"\n\n...' > $@
 
 $(content_root)/Lectures/outlines/%.pdf: $(content_root)/Lectures/%.yml $(config_file) $(content_root)/Lectures/%.md
 	@mkdir -p $(content_root)/Lectures/outlines/
