@@ -4,11 +4,12 @@ import re
 import yaml
 import dateutil
 import datetime
+import sys
 from settings import dir, course_settings, get_course
 from pathlib import Path
 course = course_settings
 
-def build_yaml():
+def build_yaml(write = True):
     output = {}
     output["name"] = course["Course_Title"]
     output["navbar"] = {}
@@ -22,13 +23,15 @@ def build_yaml():
         site_list = double_linked
 
     output["navbar"]["left"] = site_list
-        
-    f = open("_site/_site.yml","w")
-    f.write(yaml.dump(output))
+    
+    if write:
+        f = open("_site/_site.yml", "w")
+        f.write(yaml.dump(output))
 
     return site_list
 
 def write_pdf_list(site_list):
+    
     pdfs = []
     
     for item in site_list:
@@ -103,17 +106,16 @@ def files_in_dir(dir, render_too = False):
 
 def build_lectures(just_list = False):
     try:
-        lecture_files = os.listdir("Lectures")
+        lecture_files = Path("course/Lectures").glob("*.md")
     except:
         return False
-
-    lecture_files = ["Lectures/" + f for f in lecture_files if f.endswith("md")]
-    
+        
     all_lectures = []
     for f in lecture_files:
         try:
             lecture = md_tools.MarkdownFile(f)
         except IOError:
+            print("Error on {}".format(f))
             continue
         if lecture.hidden():
             continue
@@ -133,7 +135,7 @@ def build_lectures(just_list = False):
 
     for date,title, lecture in all_lectures:
         p = os.path.basename(lecture.fn).replace(".md","")
-        oput.write("* {} [(outline)]({}.pdf) [(slides)](slides/{}.html)\n".format(
+        oput.write("* {} [(outline)](outlines/{}.pdf) [(slides)](slides/{}.html)\n".format(
             title,p,p
         ))
     return lecture_files
@@ -167,9 +169,54 @@ def build_readings(just_list = False):
 
     return reading_files
 
-
-if __name__=="__main__":
+def build_site():
     site_list = build_yaml()
     write_pdf_list(site_list)
     build_lectures()
     md_tools.build_index_file()
+
+    
+no_pdfs = set(["course/" + x for x in ["Readings/Readings.md"]])
+def files(format = 'markdown'):
+    """
+    returns PosixPath
+    """
+    ordinary = [f for f in Path("course").glob("*/*.md") if not str(f) in no_pdfs and not "Lectures/" in str(f)]
+    lectures = [f for f in Path("course", "Lectures").glob("*.md") if not str(f) in no_pdfs]
+    
+    if format == 'markdown':
+        return [str(f) for f in ordinary + lectures]
+
+    outlines = [ Path("course", "Lectures", "outlines", f.name.replace(".md", ".pdf")) for f in lectures]
+    
+    if format == 'slides':
+        return [Path("_site", "slides", f.name.replace(".md", ".html")) for f in lectures]
+    elif format == 'epub':
+        return [f.with_suffix(".epub") for f in lectures]
+    elif format == 'pdf':
+        return [f.with_suffix(".pdf") for f in ordinary + lectures] + outlines
+    elif format == 'webpdf':
+        
+        base = [Path("_site", "__".join(f.with_suffix(".pdf").parts[1:])) for f in ordinary]
+        outlines = [Path("_site", "outlines", l.name.replace(".md", ".pdf")) for l in lectures]
+        
+        return base + outlines
+    return fs
+
+if __name__=="__main__":
+    try:
+        argument = sys.argv[1]
+    except IndexError:
+        raise NameError("Usage: python scripts/build_site_components.py ARG\n"
+              "where ARG is one of 'build', 'markdown', 'pdfs', 'webpdfs'")
+    try:
+        future = sys.argv[2]
+    except:
+        future = False
+    if argument == 'build':
+        build_site()
+    elif argument in ['markdown', 'pdf', 'webpdf', 'epub', 'slides']:
+        names = [str(f) for f in files(argument)]
+        print(' '.join(names))
+    else:
+        print ("No sensible args")

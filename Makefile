@@ -11,30 +11,28 @@ course_code=$(shell cat $(config_file) | shyaml get-value Code)
 # All md files beginning with a capital letter should become PDFs, except README.md and anything in Readings
 # Lectures are handled spearately
 
-MARKDOWNS=$(shell find $(content_root) -iname '*.md' -not -path "$(content_root)/Lectures/*" -not -path "$(content_root)/Readings/*" -not -path "$(content_root)/private/*" -not -path "$(content_root)/syllabus/*" | egrep -v "\#" | sed 's/ /\\ /g' | grep -v "^[a-z0-9]")
+MARKDOWNS=$(shell python scripts/build_site_components.py markdown)
+#$(shell find $(content_root) -iname '*.md' -not -path "$(content_root)/Lectures/*" -not -path "$(content_root)/Readings/*" -not -path "$(content_root)/private/*" -not -path "$(content_root)/syllabus/*" | egrep -v "\#" | sed 's/ /\\ /g' | grep -v "^[a-z0-9]")
+PDFS=$(shell python scripts/build_site_components.py pdf)
 
-PDFS=$(patsubst %.md,%.pdf,$(MARKDOWNS))
+#PDFS=$(patsubst %.md,%.pdf,$(MARKDOWNS))
 
-WEBPDFS=$(filter-out _site/Lectures.pdf _site/Readings.pdf, $(shell find . -name ".pdflist.tmp" | xargs cat))
-
-LECTURES=$(patsubst %.md,%.pdf,$(shell find -L $(content_root)/Lectures -name '*.md' -not -path "*\#*"))
-LECTURESEPUB=$(patsubst %.md,%.epub,$(shell find -L $(content_root)/Lectures -name '*.md' -not -path "*\#*"))
-outlines=$(addprefix $(content_root)/Lectures/outlines/,$(notdir $(LECTURES)))
-slides=$(addsuffix .html,$(basename $(addprefix _site/slides/,$(notdir $(LECTURES)))))
-cached_images = $(patsubst $(content_root)/Lectures/%.pdf, $(content_root)/images/%, $(LECTURES))
+WEBPDFS=$(shell python scripts/build_site_components.py webpdf)
+EPUBS=$(shell python scripts/build_site_components.py epub)
+SLIDES=$(shell python scripts/build_site_components.py slides)
+cached_images=$(patsubst $(content_root)/Lectures/%.pdf, $(content_root)/images/%, $(LECTURES))
 
 # Readings will always be pdf or mp3 files to be uploaded to the web site.
 Readings=$(shell find $(content_root)/Readings -regex '.*\(.pdf\|.mp3\)' | sed 's/ /\\ /g')
 
+
 SYLLABUS_SECTIONS=$(shell cat $(content_root)/syllabus/order.yml | xargs -I{} -n 1 ls $(content_root)/syllabus/{}.md)
 
-all:  $(bibLocation) templates/configuration.tex $(PDFS) glimpse website $(content_root)/syllabus/syllabus.pdf compiledLectures
+all:  $(bibLocation) templates/configuration.tex glimpse website pdfs $(content_root)/syllabus/syllabus.pdf compiledLectures
 
 cache_the_images: $(cached_images)
 
-pdfoutlines: $(outlines)
-
-pdfs: $(PDFS) $(WEBPDFS) $(outlines)
+pdfs: $(PDFS) $(WEBPDFS)
 
 syllabus: $(content_root)/syllabus/syllabus.pdf
 
@@ -61,38 +59,35 @@ test:
 ## Website rules ##
 ###################
 
-upload: all  $(WEBPDFS) pdfoutlines
-	rsync -ra _site/ root@benschmidt.org:html/${course_code}/
+upload: all  $(WEBPDFS)
+	@rsync -ra _site/ root@benschmidt.org:html/${course_code}/
 
-website: $(config_file) _site _site/index.html _site/syllabus.pdf _site/slides $(WEBPDFS) $(slides) $(outlines)
+website: $(config_file) _site/index.html _site/syllabus.pdf _site/slides $(WEBPDFS) $(SLIDES)
 	@mkdir -p _site/Readings/Readings/
 	rsync -ra $(content_root)/Readings/ _site/Readings/Readings/
-	rsync -ra $(content_root)/Lectures/outlines/ _site/
-
-_site:
-	mkdir -p _site
 
 _site/slides: $(slides) $(content_root)/images/
-	mkdir -p _site
+	@mkdir -p _site
 	rsync -ra templates/slides/ _site/slides/
 	chmod -R 755 $(content_root)/images/
 	rsync -ra $(content_root)/images/ _site/slides/images/
 
-_site/index.html: $(config_file) $(MARKDOWNS) _site $(SYLLABUS_SECTIONS)# $(content_root)/Readings/Readings.md
-	python scripts/build_site_components.py
+_site/index.html: $(config_file) $(MARKDOWNS) $(SYLLABUS_SECTIONS)
+	@mkdir -p _site
+	python scripts/build_site_components.py build
 	Rscript -e "setwd('_site'); rmarkdown::render_site(quiet = TRUE)"
         # ???
 	rsync -r _site/_site/ _site/
+	rm -rf _site/_site/
 
-_site/%.pdf: _site
-	@make $(content_root)/$(subst __,/,$*.pdf)
+_site/outlines/%.pdf: course/Lectures/outlines/%.pdf
+	@-mkdir -p _site/outlines/
+	@cp $< $@
+
+
+_site/%.pdf: course/$(replace __,/,%).pdf
+#	@make $(content_root)/$(subst __,/,$*.pdf)
 	@cp $(content_root)/$(subst __,/,$*.pdf) $@
-
-_site/Lecture.pdfs:
-# This is just a dummy.
-# Is it supposed to end with 'pdfs'?
-	echo "WHAAT"
-	touch $@
 
 _site/syllabus.pdf: $(content_root)/syllabus/syllabus.pdf _site
 	@cp $< $@
@@ -132,8 +127,8 @@ $(content_root)/meetings.yml: $(content_root)/syllabus/schedule.yml
 $(content_root)/syllabus/syllabus.pdf: $(content_root)/syllabus/syllabus.md templates/configuration.tex  $(config_file) $(bibLocation)
 	pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --variable syllabus=T $<
 
-$(content_root)/syllabus/%.pdf: templates/configuration.tex $(content_root)/syllabus/%.md $(bibLocation)
-	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $< $(config_file)
+$(content_root)/syllabus/%.pdf: $(content_root)/syllabus/%.md $(config_file)
+	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^ 
 
 $(content_root)/syllabus/syllabus.md: $(content_root)/syllabus/Schedule.md $(SYLLABUS_SECTIONS) $(content_root)/syllabus/schedule.yml $(content_root)/syllabus/order.yml
 # For the printed syllabus, drop headers a level and make the title
@@ -171,21 +166,28 @@ course/Handouts/%.pdf: course/Handouts/%.md $(config_file)
 	echo $@
 	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
-%.pdf: %.md $(config_file)
+course/Assignments/%.pdf: course/Assignments/%.md $(config_file)
 	echo $@
+	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
+
+
+%.pdf: %.md $(config_file)
+	echo "Creating $@"
 	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
 $(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)
 	echo "Building with base format"
 	pandoc  --pdf-engine=xelatex -o $@ --filter /usr/local/bin/shuffleAllLists $(pandocOptions) $< $(config_file)
 
-clean:
-	rm templates/configuration.tex
-	rm -f $(content_root)/syllabus/*.pdf $(content_root)/syllabus/syllabus.pdf $(content_root)/syllabus/syllabus.md  $(content_root)/syllabus/Schedule.md
+webclean:
 	rm -rf _site/*	
+
+clean: webclean
+	rm templates/configuration.texmake 
+	rm -f $(content_root)/syllabus/*.pdf $(content_root)/syllabus/syllabus.pdf $(content_root)/syllabus/syllabus.md  $(content_root)/syllabus/Schedule.md
 	rm -rf $(PDFS)
-	rm -rf $(PUBS)
-	rm -rf $(content_root)/Lectures/*.yml $(content_root)/Lectures/*.pdf $(content_root)/Lectures/*.pdf
+	rm -rf $(EPUBS)
+	rm -rf $(content_root)/Lectures/*.yml $(content_root)/Lectures/*.pdf
 	rm -rf $(content_root)/Lectures/outlines
 
 ##############
@@ -193,7 +195,7 @@ clean:
 ##############
 
 _site/slides/%.html: $(content_root)/Lectures/%.yml $(config_file) $(content_root)/Lectures/%.md
-	mkdir -p _site/slides
+	@mkdir -p _site/slides
 	@echo $*
 	@pandoc --filter /usr/local/bin/lectureToSlidedeck --slide-level=2 -V theme=night -t revealjs --template templates/revealjs.html --variable=transition:Slide $^ > $@
 
