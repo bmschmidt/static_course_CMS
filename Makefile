@@ -36,13 +36,11 @@ pdfs: $(PDFS) $(WEBPDFS)
 
 syllabus: $(content_root)/syllabus/syllabus.pdf
 
-slides: $(slides)
-
 glimpse: $(MARKDOWNS)
 # Convenience; print an outline of the last edited Markdown file.
 	@ls -t -1 $(content_root)/Lectures | grep "md" | head -1 | xargs -I {} pandoc --filter /usr/local/bin/lectureToOutline -t markdown $(content_root)/Lectures/{} | grep "."
 
-compiledLectures: $(LECTURESEPUB) $(slides)
+compiledLectures: $(LECTURESEPUB) $(SLIDES)
 
 test:
 	@echo "SYLLABUS SECTIONS\n------------------"
@@ -53,6 +51,8 @@ test:
 	@echo $(WEBPDFS)
 	@echo "MARKDOWNS\n------------------"
 	@echo $(MARKDOWNS)
+	@echo "SLIDES\n------------------"
+	@echo $(SLIDES)
 
 
 ###################
@@ -86,7 +86,6 @@ _site/outlines/%.pdf: course/Lectures/outlines/%.pdf
 
 
 _site/%.pdf: course/$(replace __,/,%).pdf
-#	@make $(content_root)/$(subst __,/,$*.pdf)
 	@cp $(content_root)/$(subst __,/,$*.pdf) $@
 
 _site/syllabus.pdf: $(content_root)/syllabus/syllabus.pdf _site
@@ -108,11 +107,10 @@ templates/configuration.tex: $(config_file)
 ## Bibliography ###
 ###################
 
-$(content_root)/.pathkeys: $(SYLLABUS_SECTIONS) $(MARKDOWNS)
-	python scripts/list_bibliography_keys.py
+## Note: this is triggered every build, but only rewrites if the bibliography is actually changed.
 
-$(bibLocation): $(content_root)/.pathkeys
-	python scripts/create_bibliography.py
+$(bibLocation): $(SYLLABUS_SECTIONS) $(MARKDOWNS)
+	python scripts/create_bibliography.py $@
 
 ##################
 #### Syllabus ####
@@ -175,7 +173,7 @@ course/Assignments/%.pdf: course/Assignments/%.md $(config_file)
 	echo "Creating $@"
 	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
-$(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)
+$(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)make 
 	echo "Building with base format"
 	pandoc  --pdf-engine=xelatex -o $@ --filter /usr/local/bin/shuffleAllLists $(pandocOptions) $< $(config_file)
 
@@ -194,9 +192,12 @@ clean: webclean
 ### site #####
 ##############
 
+_site/Handouts__%.pdf: $(content_root)/Handouts/%.pdf
+	@cp $< $@
+
 _site/slides/%.html: $(content_root)/Lectures/%.yml $(config_file) $(content_root)/Lectures/%.md
 	@mkdir -p _site/slides
 	@echo $*
-	@pandoc --filter /usr/local/bin/lectureToSlidedeck --slide-level=2 -V theme=night -t revealjs --template templates/revealjs.html --variable=transition:Slide $^ > $@
+	pandoc --filter /usr/local/bin/lectureToSlidedeck --slide-level=2 -V theme=night -t revealjs --template templates/revealjs.html --variable=transition:Slide $^ > $@
 
 

@@ -174,7 +174,6 @@ def build_site():
     write_pdf_list(site_list)
     build_lectures()
     md_tools.build_index_file()
-
     
 no_pdfs = set(["course/" + x for x in ["Readings/Readings.md"]])
 def files(format = 'markdown'):
@@ -185,7 +184,7 @@ def files(format = 'markdown'):
     lectures = [f for f in Path("course", "Lectures").glob("*.md") if not str(f) in no_pdfs]
     
     if format == 'markdown':
-        return [str(f) for f in ordinary + lectures]
+        return [f for f in ordinary + lectures]
 
     outlines = [ Path("course", "Lectures", "outlines", f.name.replace(".md", ".pdf")) for f in lectures]
     
@@ -203,6 +202,12 @@ def files(format = 'markdown'):
         return base + outlines
     return fs
 
+def path_filter(path):
+    """No emacs temporary files, etc. Only for files that should never be included anywhere"""
+    if path.name.startswith("."):
+        return False
+    return True
+    
 if __name__=="__main__":
     try:
         argument = sys.argv[1]
@@ -216,7 +221,8 @@ if __name__=="__main__":
     if argument == 'build':
         build_site()
     elif argument in ['markdown', 'pdf', 'webpdf', 'epub', 'slides']:
-        names = [str(f) for f in files(argument)]
+        names = [str(f) for f in files(argument) if path_filter(f)]
         print(' '.join(names))
     else:
         print ("No sensible args")
+
