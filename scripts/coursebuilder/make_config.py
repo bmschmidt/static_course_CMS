@@ -1,4 +1,4 @@
-from settings import course_settings, dir
+from .settings import course_settings, dir
 
 with open(f"templates/configuration.tex", "w") as fout:
     for k, v in course_settings.items():

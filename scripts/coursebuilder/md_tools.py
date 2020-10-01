@@ -5,7 +5,7 @@ import sys
 import os
 import datetime
 import dateutil
-from settings import course_settings, dir
+from .settings import course_settings, dir
 from pathlib import Path
 
 def course_meta():
@@ -14,7 +14,7 @@ def course_meta():
 syllabus_order = [line.rstrip() for line in open(f"{dir}/syllabus/order.yml")]
 
 class MarkdownFile(object):
-    def __init__(self, fin):
+    def __init__(self, fin: Path):
         self.fin = fin
         self.fn = str(Path(fin.parent.name, fin.name))
         self.lines = [l.replace("\r", "").strip("\xef\xbb\xbf") for l in self.fin.open()]

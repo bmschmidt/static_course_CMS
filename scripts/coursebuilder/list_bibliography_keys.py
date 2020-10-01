@@ -1,7 +1,7 @@
 #! /usr/bin/python
 import re
 import glob
-from settings import dir, bibliography
+from .settings import dir, bibliography
 from pathlib import Path
 
 # Bibliography entries to retrieve
@@ -27,4 +27,3 @@ matchlist.sort()
 with open(dir / ".pathkeys", "w") as fout: 
     for match in matchlist:
         fout.write(match + "\n")
-
