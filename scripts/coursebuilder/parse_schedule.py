@@ -49,10 +49,11 @@ def format_assignments(session: dict, date: Arrow) -> List[Tuple[Arrow, str]]:
     return val
         
 def format_assignment(assignment : Dict[str, str], date : Arrow) -> Tuple[Arrow, str]:
+    duedate : Arrow
     due : str = assignment['due']
     text : str = assignment['text'] 
     try:
-        due = arrow.get('due')
+        duedate = arrow.get(due)
     except:
         duedate = date
         if due.startswith("next "):
@@ -61,17 +62,16 @@ def format_assignment(assignment : Dict[str, str], date : Arrow) -> Tuple[Arrow,
         elif due.startswith("this "):
             due = due.strip("this ") # Meaningless.
         if due in day_codes:
-            duedate.shift(weekday = day_codes[due])
+            duedate = duedate.shift(weekday = day_codes[due])
         elif due.startswith("today"):
             pass
         else:
             try: 
-                due = arrow.get("2020/" + due)
+                duedate = arrow.get("2020/" + due)
             except:                
                 raise NameError(f"Unable to parse date {due}")
-        due = duedate
-    text = f"**Due {due.format(date_format)}:** {text}\n\n" 
-    return (due, text)
+    text : str = f"**Due {duedate.format(date_format)}:** {text}\n\n" 
+    return (duedate, text)
     
 def format_session(session = None, date = None, seminar = False):
     global week

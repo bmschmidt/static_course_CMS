@@ -1,4 +1,6 @@
 ### Special options
+PATH := /usr/local/bin:$(PATH)
+SHELL := /bin/bash
 
 content_root=course
 
@@ -37,8 +39,10 @@ pdfs: $(PDFS) $(WEBPDFS)
 syllabus: $(content_root)/syllabus/syllabus.pdf
 
 glimpse: $(MARKDOWNS)
-# Convenience; print an outline of the last edited Markdown file.
-	@ls -t -1 $(content_root)/Lectures | grep "md" | head -1 | xargs -I {} pandoc --filter /usr/local/bin/lectureToOutline -t markdown $(content_root)/Lectures/{} | grep "."
+	# Convenience; print an outline of the last edited Markdown file.
+
+	#echo $(shell echo $$PATH)
+	ls -t -1 $(content_root)/Lectures | grep "md" | head -1 | xargs -I {} /usr/local/bin/pandoc --filter /usr/local/bin/lectureToOutline -t markdown $(content_root)/Lectures/{} | grep "."
 
 compiledLectures: $(LECTURESEPUB) $(SLIDES)
 
@@ -91,6 +95,10 @@ _site/%.pdf: course/$(replace __,/,%).pdf
 _site/syllabus.pdf: $(content_root)/syllabus/syllabus.pdf _site
 	@cp $< $@
 
+_site/syllabus__%.pdf: $(content_root)/syllabus/%.pdf _site
+	@cp $< $@
+
+
 #So: to make a part appear in the syllabus, it just has to be a markdown file starting with a number.
 
 $(content_root)/Readings/Readings.md: #$(content_root)/Readings
@@ -110,28 +118,27 @@ templates/configuration.tex: $(config_file)
 ## Note: this is triggered every build, but only rewrites if the bibliography is actually changed.
 
 $(bibLocation): $(SYLLABUS_SECTIONS) $(MARKDOWNS)
-	python scripts/create_bibliography.py $@
+	python scripts/manager.py create_bibliography $@
 
 ##################
 #### Syllabus ####
 ##################
 
 $(content_root)/syllabus/Schedule.md: $(content_root)/syllabus/schedule.yml
-	python scripts/parse_schedule.py $< $@
+	python scripts/manager.py parse_schedule $< $@
 
-$(content_root)/meetings.yml: $(content_root)/syllabus/schedule.yml
-	python scripts/parse_schedule.py
+$(content_root)/meetings.yml: $(content_root)/syllabus/Schedule.md
 
 $(content_root)/syllabus/syllabus.pdf: $(content_root)/syllabus/syllabus.md templates/configuration.tex  $(config_file) $(bibLocation)
-	pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --variable syllabus=T $<
+	/usr/local/bin/pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --variable syllabus=T $<
 
 $(content_root)/syllabus/%.pdf: $(content_root)/syllabus/%.md $(config_file)
-	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^ 
+	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^ 
 
 $(content_root)/syllabus/syllabus.md: $(content_root)/syllabus/Schedule.md $(SYLLABUS_SECTIONS) $(content_root)/syllabus/schedule.yml $(content_root)/syllabus/order.yml
 # For the printed syllabus, drop headers a level and make the title
 # a section heading. This could be done properly in pandoc, but isn't.
-	@pandoc  $(config_file) $(SYLLABUS_SECTIONS) -t markdown | perl -pe ' s/^#/\n##/; s/^% /\n\n# /' > $@
+	@/usr/local/bin/pandoc  $(config_file) $(SYLLABUS_SECTIONS) -t markdown | perl -pe ' s/^#/\n##/; s/^% /\n\n# /' > $@
 #	echo "$(SYLLABUS_SECTIONS)" | tr " " "\n" | xargs 
 
 $(content_root)/syllabus/order.yml:
@@ -147,14 +154,14 @@ $(content_root)/Lectures/%.yml:
 $(content_root)/Lectures/outlines/%.pdf: $(content_root)/Lectures/%.yml $(config_file) $(content_root)/Lectures/%.md
 	@mkdir -p $(content_root)/Lectures/outlines/
 	@echo "$@"
-	@pandoc --pdf-engine=xelatex --filter /usr/local/bin/lectureToOutline $(pandocOptions) -o $@ $^
+	@/usr/local/bin/pandoc --pdf-engine=xelatex --filter /usr/local/bin/lectureToOutline $(pandocOptions) -o $@ $^
 	@cp $@ _site/
 
 $(content_root)/Lectures/%.epub: $(content_root)/Lectures/%.yml $(config_file) $(content_root)/Lectures/%.md
-	pandoc --bibliography=$(bibLocation) --filter /usr/local/bin/lectureToPrintable -o $@ $^
+	/usr/local/bin/pandoc --bibliography=$(bibLocation) --filter /usr/local/bin/lectureToPrintable -o $@ $^
 
 $(content_root)/Lectures/%.pdf: $(content_root)/Lectures/%.yml $(config_file) $(content_root)/Lectures/%.md
-	pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --filter /usr/local/bin/lectureToPrintable $(config_file) $^
+	/usr/local/bin/pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --filter /usr/local/bin/lectureToPrintable $(config_file) $^
 
 ############
 ##  PDFS  ##
@@ -162,20 +169,20 @@ $(content_root)/Lectures/%.pdf: $(content_root)/Lectures/%.yml $(config_file) $(
 
 course/Handouts/%.pdf: course/Handouts/%.md $(config_file)
 	echo $@
-	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
+	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
 course/Assignments/%.pdf: course/Assignments/%.md $(config_file)
 	echo $@
-	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
+	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
 
 %.pdf: %.md $(config_file)
 	echo "Creating $@"
-	pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
+	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
 $(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)make 
 	echo "Building with base format"
-	pandoc  --pdf-engine=xelatex -o $@ --filter /usr/local/bin/shuffleAllLists $(pandocOptions) $< $(config_file)
+	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ --filter /usr/local/bin/shuffleAllLists $(pandocOptions) $< $(config_file)
 
 webclean:
 	rm -rf _site/*	
@@ -198,6 +205,4 @@ _site/Handouts__%.pdf: $(content_root)/Handouts/%.pdf
 _site/slides/%.html: $(content_root)/Lectures/%.yml $(config_file) $(content_root)/Lectures/%.md
 	@mkdir -p _site/slides
 	@echo $*
-	pandoc --filter /usr/local/bin/lectureToSlidedeck --slide-level=2 -V theme=night -t revealjs --template templates/revealjs.html --variable=transition:Slide $^ > $@
-
-
+	/usr/local/bin/pandoc --filter /usr/local/bin/lectureToSlidedeck --slide-level=2 -V theme=night -t revealjs --template templates/revealjs.html --variable=transition:Slide $^ > $@

@@ -1,5 +1,6 @@
 "Spring 2020 NYU":
   start_date: 2020-01-27
+  end_date: 2020-05-11
   breaks:
     -
       name: "President's Day"
@@ -8,5 +9,30 @@
       name: "Spring Break"
       start: 2020-03-16
       end: 2020-03-22
-  end_date: 2020-05-11
-
+"Fall 2020 NYU":
+  start_date: 2020-09-02
+  end_date: 2020-12-13
+  reschedules:
+    - 
+      name: Labor Day
+      from: 2020-09-07
+      to: 2020-09-09
+  breaks:
+    -
+      name: Legislative Day
+      start: 2020-09-09
+    - 
+      name: Thanksgiving
+      start: 2020-11-26
+      end: 2020-11-27
+"Spring 2021 NYU":
+  start: 2021-01-25
+  end: 2021-05-10
+  breaks:
+    -
+      name: "President's Day"
+      start: 2021-02-15
+    -
+      name: "Spring Break"
+      start: 2021-03-15
+      end: 2021-03-21
