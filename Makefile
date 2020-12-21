@@ -7,7 +7,7 @@ content_root=course
 config_file = $(content_root)/course.yml
 
 bibLocation=$(content_root)/works_cited.bib
-pandocOptions=--template=templates/template.tex --bibliography=$(bibLocation) --csl=citationstyles/chicago-in-text.csl
+pandocOptions=--template=templates/template.tex# --bibliography=$(bibLocation) --csl=citationstyles/chicago-in-text.csl
 course_code=$(shell cat $(config_file) | shyaml get-value Code)
 
 # All md files beginning with a capital letter should become PDFs, except README.md and anything in Readings
@@ -26,7 +26,6 @@ cached_images=$(patsubst $(content_root)/Lectures/%.pdf, $(content_root)/images/
 
 # Readings will always be pdf or mp3 files to be uploaded to the web site.
 Readings=$(shell find $(content_root)/Readings -regex '.*\(.pdf\|.mp3\)' | sed 's/ /\\ /g')
-
 
 SYLLABUS_SECTIONS=$(shell cat $(content_root)/syllabus/order.yml | xargs -I{} -n 1 ls $(content_root)/syllabus/{}.md)
 
@@ -109,7 +108,7 @@ $(content_root)/images/%: $(content_root)/Lectures/%.md
 	python scripts/download_images.py $< $@
 
 templates/configuration.tex: $(config_file)
-	python scripts/make_config.py
+	python scripts/manager.py make_config
 
 ###################
 ## Bibliography ###
@@ -133,13 +132,13 @@ $(content_root)/syllabus/syllabus.pdf: $(content_root)/syllabus/syllabus.md temp
 	/usr/local/bin/pandoc --pdf-engine=xelatex -o $@ $(pandocOptions) --variable syllabus=T $<
 
 $(content_root)/syllabus/%.pdf: $(content_root)/syllabus/%.md $(config_file)
-	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^ 
+	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
 $(content_root)/syllabus/syllabus.md: $(content_root)/syllabus/Schedule.md $(SYLLABUS_SECTIONS) $(content_root)/syllabus/schedule.yml $(content_root)/syllabus/order.yml
 # For the printed syllabus, drop headers a level and make the title
 # a section heading. This could be done properly in pandoc, but isn't.
 	@/usr/local/bin/pandoc  $(config_file) $(SYLLABUS_SECTIONS) -t markdown | perl -pe ' s/^#/\n##/; s/^% /\n\n# /' > $@
-#	echo "$(SYLLABUS_SECTIONS)" | tr " " "\n" | xargs 
+#	echo "$(SYLLABUS_SECTIONS)" | tr " " "\n" | xargs
 
 $(content_root)/syllabus/order.yml:
 	ls $(content_root)/syllabus/ | grep md | grep -v syllabus | perl -pe 's/.md.?//' | uniq > $(content_root)/syllabus/order.yml
@@ -180,15 +179,15 @@ course/Assignments/%.pdf: course/Assignments/%.md $(config_file)
 	echo "Creating $@"
 	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ $(pandocOptions) $^
 
-$(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)make 
+$(content_root)/tests/%.pdf: %.md $(config_file) $(bibLocation)make
 	echo "Building with base format"
 	/usr/local/bin/pandoc  --pdf-engine=xelatex -o $@ --filter /usr/local/bin/shuffleAllLists $(pandocOptions) $< $(config_file)
 
 webclean:
-	rm -rf _site/*	
+	rm -rf _site/*
 
 clean: webclean
-	rm templates/configuration.texmake 
+	rm templates/configuration.texmake
 	rm -f $(content_root)/syllabus/*.pdf $(content_root)/syllabus/syllabus.pdf $(content_root)/syllabus/syllabus.md  $(content_root)/syllabus/Schedule.md
 	rm -rf $(PDFS)
 	rm -rf $(EPUBS)
